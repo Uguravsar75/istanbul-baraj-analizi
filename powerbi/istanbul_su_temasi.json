@@ -1,0 +1,46 @@
+{
+  "name": "İstanbul Su Yönetimi Kurumsal Teması",
+  "dataColors": [
+    "#0B3C5D",
+    "#1D65A6",
+    "#328CC1",
+    "#008B8B",
+    "#2CA02C",
+    "#D9B310",
+    "#E67E22",
+    "#D9534F",
+    "#6C5B7B",
+    "#355C7D"
+  ],
+  "background": "#FFFFFF",
+  "foreground": "#1E293B",
+  "tableAccent": "#1D65A6",
+  "good": "#2CA02C",
+  "neutral": "#D9B310",
+  "bad": "#D9534F",
+  "maximum": "#0B3C5D",
+  "center": "#328CC1",
+  "minimum": "#E0F2FE",
+  "textClasses": {
+    "callout": {
+      "fontSize": 28,
+      "fontFace": "Segoe UI Bold",
+      "color": "#0B3C5D"
+    },
+    "title": {
+      "fontSize": 13,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#0F172A"
+    },
+    "header": {
+      "fontSize": 11,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#1E293B"
+    },
+    "label": {
+      "fontSize": 10,
+      "fontFace": "Segoe UI",
+      "color": "#475569"
+    }
+  }
+}

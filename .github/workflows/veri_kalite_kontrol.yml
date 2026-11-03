@@ -1,0 +1,36 @@
+name: Veri Kalitesi ve Analiz Doğrulama (CI)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  data-quality-check:
+    name: Veri Bütünlüğü ve ETL Testleri
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Depoyu Klonla
+        uses: actions/checkout@v4
+
+      - name: Python Ortamını Kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Bağımlılıkları Yükle
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Veri Kalitesi Birim Testlerini Çalıştır
+        run: |
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: ETL ve Görselleştirme Betiğini Doğrula
+        run: |
+          python analiz_ve_gorsellestirme.py

@@ -308,6 +308,84 @@ def grafikleri_olustur(df_occ, df_std, df_merged, df_unpivot):
     fig.savefig(ASSETS_DIR / "mevsimsel_isi_haritasi.png", dpi=180)
     plt.close(fig)
 
+    # --- GRAFİK 3: Havza Korelasyon Matrisi ve Kuraklık Risk Analizi (korelasyon_ve_kuraklik_analizi.png) ---
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6.5), dpi=180)
+
+    # 3A: 10 Baraj Havzası Günlük Yağış Korelasyon Matrisi
+    ax_corr = axes[0]
+    corr_matrix = df_std[baraj_sutunlari].corr()
+    mask = np.triu(np.ones_like(corr_matrix, dtype=bool), k=1)
+    sns.heatmap(
+        corr_matrix,
+        mask=mask,
+        annot=True,
+        fmt=".2f",
+        cmap="coolwarm",
+        vmin=0.4,
+        vmax=1.0,
+        linewidths=0.5,
+        cbar_kws={"label": "Pearson Korelasyon Katsayısı (r)"},
+        ax=ax_corr,
+    )
+    ax_corr.set_title(
+        "Baraj Havzaları Günlük Yağış Korelasyon Matrisi",
+        fontsize=12,
+        fontweight="bold",
+        pad=10,
+    )
+    ax_corr.tick_params(axis="x", rotation=35)
+    ax_corr.tick_params(axis="y", rotation=0)
+
+    # 3B: Kritik Kuraklık Eşiği (<%30) ve 365 Günlük Hareketli Ortalama
+    ax_dr = axes[1]
+    df_occ_dt["MA_365"] = (
+        df_occ_dt["GENERAL_DAM_OCCUPANCY_RATE"].rolling(window=365, min_periods=30).mean()
+    )
+    ax_dr.plot(
+        df_occ_dt["DATE"],
+        df_occ_dt["GENERAL_DAM_OCCUPANCY_RATE"],
+        color="#7f9eb2",
+        alpha=0.6,
+        linewidth=1.0,
+        label="Günlük Doluluk (%)",
+    )
+    ax_dr.plot(
+        df_occ_dt["DATE"],
+        df_occ_dt["MA_365"],
+        color="#0b3c5d",
+        linewidth=2.2,
+        label="365 Günlük Hareketli Ortalama",
+    )
+    ax_dr.axhline(
+        30,
+        color="#d9534f",
+        linestyle="--",
+        linewidth=1.5,
+        label="Kritik Kuraklık Eşiği (%30)",
+    )
+    ax_dr.fill_between(
+        df_occ_dt["DATE"],
+        df_occ_dt["GENERAL_DAM_OCCUPANCY_RATE"],
+        30,
+        where=(df_occ_dt["GENERAL_DAM_OCCUPANCY_RATE"] < 30),
+        color="#d9534f",
+        alpha=0.35,
+        label="Kritik Kuraklık Dönemleri",
+    )
+    ax_dr.set_title(
+        "Uzun Dönem Doluluk Eğilimi ve Kritik Kuraklık Dönemleri (<%30)",
+        fontsize=12,
+        fontweight="bold",
+        pad=10,
+    )
+    ax_dr.set_ylabel("Doluluk Oranı (%)")
+    ax_dr.set_ylim(0, 105)
+    ax_dr.legend(loc="lower left")
+
+    plt.tight_layout()
+    fig.savefig(ASSETS_DIR / "korelasyon_ve_kuraklik_analizi.png", dpi=180)
+    plt.close(fig)
+
 
 def ozet_yazdir(df_occ, df_std, df_merged):
     """Veri setlerine ait temel istatistikleri konsola yazdırır."""
