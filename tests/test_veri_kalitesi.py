@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-İstanbul Barajları Veri Kalitesi ve Bütünlük Testleri (Data Quality Tests)
-==========================================================================
-Veri setlerindeki tarih sürekliliğini, tekilliğini (primary key),
-değer aralıklarını ve türetilmiş tabloların tutarlılığını doğrular.
+Istanbul Dams Data Quality & Schema Integrity Unit Tests
+========================================================
+Validates time-series continuity, primary-key uniqueness, value bounds,
+and schema consistency across raw and derived datasets.
 """
 
 from pathlib import Path
@@ -14,8 +14,8 @@ import pandas as pd
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-class TestVeriKalitesi(unittest.TestCase):
-    """Ham ve işlenmiş veri setleri için kalite kontrol testleri."""
+class TestDataQuality(unittest.TestCase):
+    """Automated unit tests for raw and processed hydrological datasets."""
 
     @classmethod
     def setUpClass(cls):
@@ -27,46 +27,46 @@ class TestVeriKalitesi(unittest.TestCase):
         cls.df_merged = pd.read_csv(BASE_DIR / "data" / "istanbul_baraj_birlesik_veri.csv")
         cls.df_unpivot = pd.read_csv(BASE_DIR / "data" / "istanbul_baraj_yagis_unpivot.csv")
 
-    def test_doluluk_verisi_tekillik_ve_sureklilik(self):
-        """dam_occupancy.csv içinde mükerrer veya eksik gün olmamalıdır."""
-        self.assertEqual(self.df_occ.isnull().sum().sum(), 0, "Boş (NaN) değer bulunmamalı.")
+    def test_occupancy_uniqueness_and_continuity(self):
+        """dam_occupancy.csv must contain zero duplicate dates and zero missing days."""
+        self.assertEqual(self.df_occ.isnull().sum().sum(), 0, "Dataset must not contain NaN values.")
         self.assertEqual(
             self.df_occ["DATE"].duplicated().sum(),
             0,
-            "DATE sütununda mükerrer tarih bulunmamalı (Primary Key ihlali).",
+            "DATE column must not contain duplicate dates (Primary Key violation).",
         )
         dt = pd.to_datetime(self.df_occ["DATE"])
-        beklenen_gun_sayisi = (dt.max() - dt.min()).days + 1
+        expected_days = (dt.max() - dt.min()).days + 1
         self.assertEqual(
             len(self.df_occ),
-            beklenen_gun_sayisi,
-            "Tarih serisinde atlanmış/eksik gün bulunmamalı.",
+            expected_days,
+            "Time series must be strictly continuous without skipped dates.",
         )
 
-    def test_doluluk_orani_deger_araligi(self):
-        """Doluluk oranı %0 ile %100 arasında, rezerv su pozitif olmalıdır."""
-        oran = self.df_occ["GENERAL_DAM_OCCUPANCY_RATE"]
-        rezerv = self.df_occ["GENERAL_DAM_RESERVED_WATER"]
-        self.assertTrue(((oran >= 0) & (oran <= 100)).all(), "Doluluk oranı 0-100 aralığında olmalı.")
-        self.assertTrue((rezerv > 0).all(), "Rezerv su miktarı pozitif olmalı.")
+    def test_occupancy_value_bounds(self):
+        """Occupancy rate must lie within [0, 100]% and reserved water must be positive."""
+        rate = self.df_occ["GENERAL_DAM_OCCUPANCY_RATE"]
+        reserve = self.df_occ["GENERAL_DAM_RESERVED_WATER"]
+        self.assertTrue(((rate >= 0) & (rate <= 100)).all(), "Occupancy rate must be between 0 and 100.")
+        self.assertTrue((reserve > 0).all(), "Reserved water volume must be strictly positive.")
 
-    def test_excel_yapisi_ve_temizligi(self):
-        """Excel dosyasında Unnamed (boş) sütun ve negatif değer bulunmamalıdır."""
+    def test_excel_structure_and_cleanliness(self):
+        """Excel dataset must have no Unnamed empty columns or NaN values."""
         unnamed_cols = [c for c in self.df_xl.columns if str(c).startswith("Unnamed")]
-        self.assertEqual(len(unnamed_cols), 0, f"Boş sütun kalmamalı: {unnamed_cols}")
-        self.assertEqual(self.df_xl.isnull().sum().sum(), 0, "Excel verisinde NaN değer olmamalı.")
-        self.assertEqual(len(self.df_xl), 4797, "Excel satır sayısı 4797 gün olmalı.")
+        self.assertEqual(len(unnamed_cols), 0, f"Unexpected empty columns found: {unnamed_cols}")
+        self.assertEqual(self.df_xl.isnull().sum().sum(), 0, "Excel dataset must not contain NaN values.")
+        self.assertEqual(len(self.df_xl), 4797, "Excel row count must equal 4,797 days.")
 
-    def test_birlesik_ve_unpivot_veri_tutarliligi(self):
-        """Türetilmiş CSV dosyalarının boyut ve şemaları tutarlı olmalıdır."""
+    def test_merged_and_unpivoted_consistency(self):
+        """Derived CSV tables must match expected dimensions and non-negative constraints."""
         self.assertEqual(len(self.df_merged), 4797)
         self.assertEqual(
             len(self.df_unpivot),
             len(self.df_merged) * 10,
-            "Unpivot tablosu 10 baraj x 4797 gün = 47.970 satır olmalıdır.",
+            "Unpivoted table must equal 10 dams x 4,797 days = 47,970 rows.",
         )
-        self.assertEqual(self.df_unpivot["Baraj_Adi"].nunique(), 10, "10 benzersiz baraj bulunmalı.")
-        self.assertTrue((self.df_unpivot["Yagis_mm"] >= 0).all(), "Yağış değerleri negatif olamaz.")
+        self.assertEqual(self.df_unpivot["Baraj_Adi"].nunique(), 10, "Must contain exactly 10 unique dams.")
+        self.assertTrue((self.df_unpivot["Yagis_mm"] >= 0).all(), "Precipitation cannot be negative.")
 
 
 if __name__ == "__main__":

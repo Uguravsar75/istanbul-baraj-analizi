@@ -1,14 +1,14 @@
-# İşletim Sistemi Dosyaları
+# Operating System Files
 .DS_Store
 Thumbs.db
 
-# Office ve Power BI Geçici Dosyaları
+# Office & Power BI Temporary Lock Files
 ~$*.xlsx
 ~$*.xls
 *.pbix.bak
 *.pbit.bak
 
-# Python Önbellek ve Sanal Ortamlar
+# Python Cache & Virtual Environments
 __pycache__/
 *.py[cod]
 *$py.class
@@ -17,4 +17,3 @@ venv/
 env/
 .ipynb_checkpoints/
 .matplotlib/
-

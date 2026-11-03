@@ -1,70 +1,70 @@
-# 📊 Power BI Veri Modeli, DAX ve Power Query (M) Rehberi
+# 📊 Power BI Data Model, DAX Measures & Power Query (M) Guide
 
-Bu doküman, `108_analiz.pbix` raporunu genişletmek veya sıfırdan yıldız şeması (**Star Schema**) kurmak isteyen analistler için hazır **DAX ölçülerini**, **Power Query (M)** dönüşüm kodlarını ve özel **Power BI Tema** kurulum adımlarını içerir.
-
----
-
-## 🎨 1. Kurumsal Power BI Temasını Yükleme
-
-Depodaki [`powerbi/istanbul_su_temasi.json`](istanbul_su_temasi.json) dosyası su kaynakları analizine uygun okyanus mavisi ve turkuaz renk paletini içerir:
-
-1. **Power BI Desktop**'ta `108_analiz.pbix` dosyasını açın.
-2. Üst menüden **Görünüm (View)** sekmesine geçin.
-3. **Temalar (Themes)** açılır menüsünden **Temalara Göz At (Browse for themes)** seçeneğine tıklayın.
-4. `powerbi/istanbul_su_temasi.json` dosyasını seçin.
+This guide provides ready-to-use **DAX formulas**, a dynamic **Calendar dimension table (`Dim_Tarih`)**, **Power Query (M)** unpivoting scripts, and instructions for applying the custom **Power BI JSON Theme** to `108_analiz.pbix`.
 
 ---
 
-## 📐 2. Dinamik Takvim Tablosu (`Dim_Tarih` - DAX)
+## 🎨 1. Applying the Custom Power BI Theme
 
-`Fact_Istanbul_Baraj` (2011–2024) ve `Dim_Dam_Occupancy` (2005–2021) tablolarını ortak bir zaman boyutunda filtrelemek için **Modelleme -> Yeni Tablo** menüsünden aşağıdaki DAX tablosunu oluşturabilirsiniz:
+The [`powerbi/istanbul_su_temasi.json`](istanbul_su_temasi.json) file defines an ocean-blue and teal corporate color palette tailored for hydrological and utility analytics:
+
+1. Open `108_analiz.pbix` in **Power BI Desktop**.
+2. Navigate to the **View** tab in the top ribbon.
+3. Click the **Themes** dropdown and select **Browse for themes**.
+4. Select `powerbi/istanbul_su_temasi.json`.
+
+---
+
+## 📐 2. Dynamic Calendar Table (`Dim_Tarih` - DAX)
+
+To filter both `Fact_Istanbul_Baraj` (`2011–2024`) and `Dim_Dam_Occupancy` (`2005–2021`) across a unified date dimension, create a calculated table via **Modeling -> New Table**:
 
 ```dax
 Dim_Tarih = 
 ADDCOLUMNS (
     CALENDAR ( DATE ( 2005, 1, 1 ), DATE ( 2024, 12, 31 ) ),
-    "Yıl", YEAR ( [Date] ),
-    "Çeyrek", "Ç" & FORMAT ( [Date], "Q" ),
-    "Ay No", MONTH ( [Date] ),
-    "Ay Adı", FORMAT ( [Date], "MMMM", "tr-TR" ),
-    "Ay Kısa", FORMAT ( [Date], "MMM", "tr-TR" ),
-    "Yıl-Ay", FORMAT ( [Date], "YYYY-MM" ),
-    "Hafta Günü", FORMAT ( [Date], "dddd", "tr-TR" ),
-    "Hafta Sonu Mu", IF ( WEEKDAY ( [Date], 2 ) >= 6, "Hafta Sonu", "Hafta İçi" ),
-    "Mevsim",
+    "Year", YEAR ( [Date] ),
+    "Quarter", "Q" & FORMAT ( [Date], "Q" ),
+    "Month Number", MONTH ( [Date] ),
+    "Month Name", FORMAT ( [Date], "MMMM", "en-US" ),
+    "Month Short", FORMAT ( [Date], "MMM", "en-US" ),
+    "Year-Month", FORMAT ( [Date], "YYYY-MM" ),
+    "Day of Week", FORMAT ( [Date], "dddd", "en-US" ),
+    "Is Weekend", IF ( WEEKDAY ( [Date], 2 ) >= 6, "Weekend", "Weekday" ),
+    "Season",
         SWITCH (
             TRUE (),
-            MONTH ( [Date] ) IN { 12, 1, 2 }, "Kış",
-            MONTH ( [Date] ) IN { 3, 4, 5 }, "İlkbahar",
-            MONTH ( [Date] ) IN { 6, 7, 8 }, "Yaz",
-            "Sonbahar"
+            MONTH ( [Date] ) IN { 12, 1, 2 }, "Winter",
+            MONTH ( [Date] ) IN { 3, 4, 5 }, "Spring",
+            MONTH ( [Date] ) IN { 6, 7, 8 }, "Summer",
+            "Autumn"
         )
 )
 ```
 
 ---
 
-## 🧮 3. İleri Seviye DAX Ölçüleri (Measures)
+## 🧮 3. Advanced DAX Measures
 
 ```dax
-// --- TEMEL KART ÖLÇÜLERİ ---
+// --- CORE KPI MEASURES ---
 
-Ortalama Doluluk Oranı (%) = 
+Average Occupancy Rate (%) = 
 AVERAGE ( Dim_Dam_Occupancy[GENERAL_DAM_OCCUPANCY_RATE] )
 
-Ortalama Rezerv Su (Milyon m³) = 
+Average Reserved Water (Million m³) = 
 AVERAGE ( Dim_Dam_Occupancy[GENERAL_DAM_RESERVED_WATER] )
 
-Ortalama Günlük Tüketim (m³) = 
+Average Daily Consumption (m³) = 
 AVERAGE ( Fact_Istanbul_Baraj[İstanbul günlük tüketim(m³/gün)] )
 
-Toplam Su Tüketimi (Milyon m³) = 
+Total Water Consumption (Million m³) = 
 DIVIDE ( SUM ( Fact_Istanbul_Baraj[İstanbul günlük tüketim(m³/gün)] ), 1000000, 0 )
 
 
-// --- HAREKETLİ ORTALAMA VE TREND ÖLÇÜLERİ ---
+// --- ROLLING AVERAGES & SMOOTHED TRENDS ---
 
-30 Günlük Hareketli Ort. Doluluk (%) = 
+30-Day Moving Avg Occupancy (%) = 
 AVERAGEX (
     DATESINPERIOD (
         Dim_Dam_Occupancy[DATE],
@@ -72,10 +72,10 @@ AVERAGEX (
         -30,
         DAY
     ),
-    [Ortalama Doluluk Oranı (%)]
+    [Average Occupancy Rate (%)]
 )
 
-30 Günlük Hareketli Ort. Tüketim (m³) = 
+30-Day Moving Avg Consumption (m³) = 
 AVERAGEX (
     DATESINPERIOD (
         Fact_Istanbul_Baraj[Tarih],
@@ -83,65 +83,65 @@ AVERAGEX (
         -30,
         DAY
     ),
-    [Ortalama Günlük Tüketim (m³)]
+    [Average Daily Consumption (m³)]
 )
 
 
-// --- YILLIK DEĞİŞİM (YoY) VE KURAKLIK RİSK DURUMU ---
+// --- YEAR-OVER-YEAR (YoY) GROWTH & DROUGHT RISK TIER ---
 
-Tüketim YoY Değişim (%) = 
-VAR MevcutDeger = [Ortalama Günlük Tüketim (m³)]
-VAR GecenYilDeger = 
+Consumption YoY Growth (%) = 
+VAR CurrentValue = [Average Daily Consumption (m³)]
+VAR PriorYearValue = 
     CALCULATE (
-        [Ortalama Günlük Tüketim (m³)],
+        [Average Daily Consumption (m³)],
         SAMEPERIODLASTYEAR ( Fact_Istanbul_Baraj[Tarih] )
     )
 RETURN
-    DIVIDE ( MevcutDeger - GecenYilDeger, GecenYilDeger, 0 )
+    DIVIDE ( CurrentValue - PriorYearValue, PriorYearValue, 0 )
 
-Kuraklık Risk Seviyesi = 
-VAR Doluluk = [Ortalama Doluluk Oranı (%)]
+Drought Risk Tier = 
+VAR Occupancy = [Average Occupancy Rate (%)]
 RETURN
     SWITCH (
         TRUE (),
-        ISBLANK ( Doluluk ), "Veri Yok",
-        Doluluk < 30, "🔴 Kritik Risk (<%30)",
-        Doluluk < 50, "🟠 Orta Risk (%30-%50)",
-        Doluluk < 75, "🟢 Normal Seviye (%50-%75)",
-        "🔵 Yüksek Doluluk (>%75)"
+        ISBLANK ( Occupancy ), "No Data",
+        Occupancy < 30, "🔴 Critical Risk (<30%)",
+        Occupancy < 50, "🟠 Moderate Risk (30%-50%)",
+        Occupancy < 75, "🟢 Normal Level (50%-75%)",
+        "🔵 High Capacity (>75%)"
     )
 ```
 
 ---
 
-## 🔄 4. Power Query (M) Unpivot Dönüşüm Kodu
+## 🔄 4. Power Query (M) Dynamic Unpivot Script
 
-Excel tablosundaki 10 baraj sütununu Power Query içinde dinamik olarak **Unpivot (Uzun Format)** haline getirmek için Gelişmiş Düzenleyici'de (Advanced Editor) şu adımı kullanabilirsiniz:
+To dynamically unpivot the 10 dam columns inside Power Query (**Home -> Transform Data -> Advanced Editor**):
 
 ```powerquery
 let
-    Kaynak = Excel.Workbook(File.Contents("istanbul-barajlarnda-ya-ve-gunluk-tuketim-verileri.xlsx"), null, true),
-    Sayfa1_Sheet = Kaynak{[Item="Sayfa1",Kind="Sheet"]}[Data],
-    TanitilanBasliklar = Table.PromoteHeaders(Sayfa1_Sheet, [PromoteAllScalars=true]),
-    TemizSutunAdlari = Table.RenameColumns(TanitilanBasliklar, {
+    Source = Excel.Workbook(File.Contents("istanbul-barajlarnda-ya-ve-gunluk-tuketim-verileri.xlsx"), null, true),
+    Sayfa1_Sheet = Source{[Item="Sayfa1",Kind="Sheet"]}[Data],
+    PromotedHeaders = Table.PromoteHeaders(Sayfa1_Sheet, [PromoteAllScalars=true]),
+    StandardizedColumns = Table.RenameColumns(PromotedHeaders, {
         {"Darlik", "Darlık"},
         {"Elmali", "Elmalı"},
         {"B.çekmece", "Büyükçekmece"},
         {"Sazlidere", "Sazlıdere"},
         {"ıstırancalar", "Istrancalar"}
     }),
-    UnpivotBarajlar = Table.UnpivotOtherColumns(
-        TemizSutunAdlari,
+    UnpivotedDams = Table.UnpivotOtherColumns(
+        StandardizedColumns,
         {"Tarih", "İstanbul günlük tüketim(m³/gün)"},
         "Baraj_Adi",
         "Yagis_mm"
     ),
-    VeriTipleri = Table.TransformColumnTypes(UnpivotBarajlar, {
+    TypedColumns = Table.TransformColumnTypes(UnpivotedDams, {
         {"Tarih", type date},
         {"Baraj_Adi", type text},
         {"Yagis_mm", type number},
         {"İstanbul günlük tüketim(m³/gün)", Int64.Type}
     })
 in
-    VeriTipleri
+    TypedColumns
 ```
